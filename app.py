@@ -106,7 +106,7 @@ st.markdown("""
 # --- Header ---
 # Initialize
 if 'engine_ready' not in st.session_state:
-    with st.status("Warming up the scanner... this usually takes a few seconds", expanded=False) as status:
+    with st.status("Warming up the scanner... this usually takes a few minutes", expanded=False) as status:
         engine = load_engine()
         if engine:
             if status: status.update(label="Scanner ready!", state="complete", expanded=False)
