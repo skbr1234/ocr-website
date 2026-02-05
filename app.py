@@ -7,6 +7,9 @@ import numpy as np
 import cv2
 import pypdfium2 as pdfium  # For PDF handling
 
+# --- Page Config MUST be the first Streamlit command ---
+st.set_page_config(page_title="Scan & Extract", layout="centered", page_icon="📄")
+
 # Disable the model source check to speed up initialization
 os.environ["PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK"] = "True"
 
@@ -27,7 +30,8 @@ def load_engine():
         # Disable mkldnn for stability
         engine = PPStructureV3(enable_mkldnn=False)
         return engine
-    except Exception:
+    except Exception as e:
+        print(f"CRITICAL ENGINE ERROR: {e}")
         return None
 
 def process_image(engine, file_obj):
@@ -61,8 +65,6 @@ def process_image(engine, file_obj):
         return None, None
 
 # --- Main UI ---
-
-st.set_page_config(page_title="Scan & Extract", layout="centered", page_icon="📄")
 
 # --- Minimalist CSS ---
 st.markdown("""
