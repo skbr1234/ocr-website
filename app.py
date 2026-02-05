@@ -104,24 +104,24 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # --- Header ---
-st.markdown("<h1>Scan & Extract</h1>", unsafe_allow_html=True)
-st.markdown('<p class="subtitle">Upload any document or image to extract text, tables, and formulas instantly.</p>', unsafe_allow_html=True)
-
 # Initialize
 if 'engine_ready' not in st.session_state:
     with st.status("Warming up the scanner... this usually takes a few seconds", expanded=False) as status:
         engine = load_engine()
         if engine:
-            status.update(label="Scanner ready!", state="complete", expanded=False)
+            if status: status.update(label="Scanner ready!", state="complete", expanded=False)
             st.session_state.engine_ready = True
         else:
-            status.update(label="Oops, something went wrong.", state="error")
+            if status: status.update(label="Oops, something went wrong.", state="error")
 else:
     engine = load_engine()
 
 if engine is None:
     st.error("The scanner is currently unavailable. Please try again in a moment.")
     st.stop()
+
+st.markdown("<h1>Scan & Extract</h1>", unsafe_allow_html=True)
+st.markdown('<p class="subtitle">Upload any document or image to extract text, tables, and formulas instantly.</p>', unsafe_allow_html=True)
 
 # --- Upload Area ---
 uploaded_file = st.file_uploader("Upload document", type=['png', 'jpg', 'jpeg', 'pdf'], label_visibility="collapsed")
@@ -177,8 +177,8 @@ if uploaded_file is not None:
                     st.markdown("**Extracted Text**")
                     st.text_area("", value="\n\n".join(full_text), height=300)
 
-            # Debug option tucked away
-            with st.expander("Raw Data"):
+            # Technical data toggle
+            if st.toggle("Show JSON Output"):
                 st.json(page_res)
         else:
             st.error("Could not read this document.")

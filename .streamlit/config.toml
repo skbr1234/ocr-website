@@ -2,4 +2,4 @@
 maxUploadSize = 50
 
 [client]
-toolbarMode = "hidden"
+toolbarMode = "minimal"

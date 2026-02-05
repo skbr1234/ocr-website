@@ -1,0 +1,12 @@
+services:
+  ocr-app:
+    build: .
+    restart: always
+    expose:
+      - "8501"
+    networks:
+      - daily-habits_default
+
+networks:
+  daily-habits_default:
+    external: true
