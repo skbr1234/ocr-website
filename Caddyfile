@@ -1,0 +1,3 @@
+ocr.planmydaily.com {
+    reverse_proxy ocr-app:8501
+}

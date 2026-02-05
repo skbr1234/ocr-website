@@ -1,0 +1,10 @@
+streamlit
+paddleocr
+paddlepaddle
+pypdfium2
+pandas
+beautifulsoup4
+lxml
+Pillow
+numpy
+opencv-python
