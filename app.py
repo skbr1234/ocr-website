@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import sys
 import json
 import pandas as pd
 from PIL import Image
@@ -26,42 +27,48 @@ def load_engine():
     """
     Loads the engine in the background.
     """
+    print("ENGINE: Starting initialization...")
+    sys.stdout.flush()
     try:
         # Disable mkldnn for stability
         engine = PPStructureV3(enable_mkldnn=False)
+        print("ENGINE: Initialization successful.")
+        sys.stdout.flush()
         return engine
     except Exception as e:
         print(f"CRITICAL ENGINE ERROR: {e}")
+        sys.stdout.flush()
         return None
 
-def process_image(engine, file_obj):
+@st.cache_data(show_spinner=False)
+def process_image_cached(file_bytes, file_type):
     """
-    Processes the uploaded file (image or PDF) using the loaded engine.
+    Cached version of the processing logic. 
+    Takes bytes and type to ensure cacheability.
     """
+    engine = load_engine()
+    if not engine:
+        return None, None
+
     try:
-        # Determine file type
-        file_type = file_obj.type
+        import io
+        file_obj = io.BytesIO(file_bytes)
         
         image = None
-        
         if file_type == "application/pdf":
-            # Process PDF: Convert first page to image
             pdf = pdfium.PdfDocument(file_obj)
-            page = pdf[0] # Get first page
-            bitmap = page.render(scale=2) # Render with higher scale for better quality
+            page = pdf[0]
+            bitmap = page.render(scale=2)
             image = bitmap.to_pil()
-            st.info("PDF detected: Processing the first page.")
         else:
-            # Process Image
             image = Image.open(file_obj).convert('RGB')
             
         img_array = np.array(image)
-        
-        # PPStructureV3 returns a list of page results
         results = engine.predict(img_array)
         return results, image
     except Exception as e:
-        st.error(f"Processing Error: {e}")
+        print(f"PROCESSING ERROR: {e}")
+        sys.stdout.flush()
         return None, None
 
 # --- Main UI ---
@@ -107,20 +114,18 @@ st.markdown("""
 
 # --- Header ---
 # Initialize
-if 'engine_ready' not in st.session_state:
+engine = load_engine()
+
+if engine is None:
+    # On first load, it might take a while. Show a status.
     with st.status("Warming up the scanner... this usually takes a few minutes", expanded=False) as status:
         engine = load_engine()
         if engine:
-            if status: status.update(label="Scanner ready!", state="complete", expanded=False)
-            st.session_state.engine_ready = True
+            status.update(label="Scanner ready!", state="complete", expanded=False)
         else:
-            if status: status.update(label="Oops, something went wrong.", state="error")
-else:
-    engine = load_engine()
-
-if engine is None:
-    st.error("The scanner is currently unavailable. Please try again in a moment.")
-    st.stop()
+            status.update(label="Oops, something went wrong.", state="error")
+            st.error("The scanner is currently unavailable. Please try again in a moment.")
+            st.stop()
 
 st.markdown("<h1>Scan & Extract</h1>", unsafe_allow_html=True)
 st.markdown('<p class="subtitle">Upload any document or image to extract text, tables, and formulas instantly.</p>', unsafe_allow_html=True)
@@ -130,8 +135,13 @@ uploaded_file = st.file_uploader("Upload document", type=['png', 'jpg', 'jpeg', 
 
 if uploaded_file is not None:
     st.write("---")
-    with st.spinner("Processing, this may take few minutes..."):
-        results, source_image = process_image(engine, uploaded_file)
+    
+    # Read file once for caching
+    file_bytes = uploaded_file.read()
+    file_type = uploaded_file.type
+    
+    with st.spinner("Processing..."):
+        results, source_image = process_image_cached(file_bytes, file_type)
         
         if results and len(results) > 0:
             page_res = results[0]
@@ -152,7 +162,7 @@ if uploaded_file is not None:
                         try:
                             df = pd.read_html(html_table)[0]
                             csv = df.to_csv(index=False).encode('utf-8')
-                            st.download_button(f"Download Table {tidx+1} (CSV)", csv, f"table_{tidx+1}.csv", "text/csv")
+                            st.download_button(f"Download Table {tidx+1} (CSV)", csv, f"table_{tidx+1}.csv", "text/csv", key=f"dl_{tidx}")
                         except: pass
 
             # 2. Formulas
@@ -179,7 +189,7 @@ if uploaded_file is not None:
                     st.markdown("**Extracted Text**")
                     st.text_area("", value="\n\n".join(full_text), height=300)
 
-            # Technical data toggle
+            # Technical data toggle - Now uses cached data so it's instant
             if st.toggle("Show JSON Output"):
                 st.json(page_res)
         else:
