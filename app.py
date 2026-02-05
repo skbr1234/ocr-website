@@ -128,7 +128,7 @@ uploaded_file = st.file_uploader("Upload document", type=['png', 'jpg', 'jpeg', 
 
 if uploaded_file is not None:
     st.write("---")
-    with st.spinner("Processing..."):
+    with st.spinner("Processing, this may take few minutes..."):
         results, source_image = process_image(engine, uploaded_file)
         
         if results and len(results) > 0:
